@@ -3,14 +3,14 @@ on: push
 env: # Set the secret as an input
   docker_username: anya-ayob
   docker_password: ${{ secrets.GITHUB_TOKEN }} #Nees to be set to be made available to the workflow
-  GIT_commit: ${{ github.event_name }}
+  GIT_commit: ${{ github.sha }}
 jobs:
   Build:
     runs-on: ubuntu-latest
     container: gradle:6-jdk11
     steps:
       - name: Clone down repository
-        uses: actions/checkout@v4    
+        uses: actions/checkout@v5    
       - name: Build the application
         run: ci/build-app.sh
       - name: Test
@@ -31,6 +31,7 @@ jobs:
         with: 
           name: code
           path: .
+          
       - name: run linting
         uses: super-linter/super-linter/slim@v7
         env:
