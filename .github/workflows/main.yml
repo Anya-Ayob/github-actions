@@ -1,8 +1,8 @@
-name: Main-workflow
-env: # Set the secret as an input
+name: Main workflow
+env:
   docker_username: anya-ayob
-  docker_password: ${{ secrets.GITHUB_TOKEN }} #Nees to be set to be made available to the workflow
-  GIT_commit: ${{ github.sha }}
+  docker_password: ${{ secrets.GITHUB_TOKEN }}
+  GIT_COMMIT: ${{ github.event_name }}
 
 on:
   push:
@@ -12,43 +12,44 @@ on:
   workflow_dispatch: 
 
 jobs:
-  Build:
+
+  Build: 
     runs-on: ubuntu-latest
     container: gradle:6-jdk11
     steps:
       - name: Clone down repository
-        uses: actions/checkout@v5    
-        
-      - name: Build the application
+        uses: actions/checkout@v5
+
+      - name: Build project
         run: ci/build-app.sh
-        
+
       - name: Test
         run: ci/unit-test-app.sh
-        
-      - name: Upload repo
+
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with: 
           name: code
           path: .
           include-hidden-files: true
-          
+
   Linting:
     runs-on: ubuntu-latest
     needs: [Build]
     steps:
       - name: Download code
         uses: actions/download-artifact@v4
-        with: 
+        with:
           name: code
           path: .
-          
-      - name: run linting
+        
+      - name: Run linting
         uses: super-linter/super-linter/slim@v7
         env:
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DISABLE_ERRORS: true 
-          
+          DISABLE_ERRORS: true
+
   Dockerimage:
     runs-on: ubuntu-latest
     needs: [Build]
@@ -67,4 +68,28 @@ jobs:
       - name: Push docker
         run: bash ci/push-docker.sh
 
+  Component-Test:
+    runs-on: ubuntu-latest
+    needs: [Dockerimage]
+    steps:
+      - name: Download code
+        uses: actions/download-artifact@v4
+        with: 
+          name: code
+          path: .
+        
+      - name: Component-test-run
+        run: bash ci/component-test.sh
 
+  Performance-Test:
+    runs-on: ubuntu-latest
+    needs: [Dockerimage]
+    steps:
+      - name: Download code
+        uses: actions/download-artifact@v4
+        with: 
+          name: code
+          path: .
+        
+      - name: Performance-test-run
+        run: bash ci/performance-test.sh
